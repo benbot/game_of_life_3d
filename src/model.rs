@@ -46,7 +46,7 @@ pub fn make_pipeline(
         push_constant_ranges: &[],
     });
 
-    let shader_string = include_str!("shader.wgsl");
+    let shader_string = std::fs::read_to_string("./src/shader.wgsl").unwrap();
     let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(shader_string.into()),
@@ -163,12 +163,12 @@ fn indiu16_into_vec(
 pub fn new(filename: &str) -> Result<Model, Box<dyn std::error::Error>> {
     let (doc, bufs, _) = gltf::import(filename)?;
     let mut vs = None;
-    let mut is = None;
+    let mut is = Vec::new();
     for m in doc.meshes() {
         for p in m.primitives() {
             let access = p.indices().unwrap();
 
-            is = Some(indiu16_into_vec(&access, &bufs).unwrap());
+            is.append(&mut indiu16_into_vec(&access, &bufs).unwrap());
 
             for (s, a) in p.attributes() {
                 match s {
@@ -184,8 +184,10 @@ pub fn new(filename: &str) -> Result<Model, Box<dyn std::error::Error>> {
         }
     }
 
+    let ret_id = if is.len() > 0 { Some(is) } else { None };
+
     Ok(Model {
         verts: vs.unwrap(),
-        indices: is,
+        indices: ret_id,
     })
 }

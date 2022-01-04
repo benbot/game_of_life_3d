@@ -33,6 +33,8 @@ pub struct RenderState {
 fn main() {
     let model = model::new("./alexisbox.gltf").unwrap();
     let event_loop = winit::event_loop::EventLoop::new();
+    let indices = model.indices.unwrap();
+    let model_size = indices.len();
     let window = winit::window::WindowBuilder::new()
         .build(&event_loop)
         .unwrap();
@@ -82,7 +84,7 @@ fn main() {
 
     let vbi = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("VBI"),
-        contents: bytemuck::cast_slice(model.indices.unwrap().as_slice()),
+        contents: bytemuck::cast_slice(indices.as_slice()),
         usage: BufferUsages::INDEX,
     });
 
@@ -206,7 +208,7 @@ fn main() {
                     Err(_) => {}
                 }
 
-                state.render();
+                state.render(model_size as u32);
             }
         }
     });
@@ -236,7 +238,7 @@ fn main() {
 }
 
 impl RenderState {
-    fn render(&self) {
+    fn render(&self, size: u32) {
         let pipeline = model::make_pipeline(self).unwrap();
         let output = self.surface.get_current_texture().unwrap();
         let out_view = output.texture.create_view(&Default::default());
@@ -272,7 +274,7 @@ impl RenderState {
             pass.set_index_buffer(self.vbi.slice(..), wgpu::IndexFormat::Uint16);
             pass.set_vertex_buffer(0, self.vbo.slice(..));
             pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            pass.draw_indexed(0..36, 0, 0..3);
+            pass.draw_indexed(0..size, 0, 0..3);
         }
 
         self.queue.submit(std::iter::once(enc.finish()));

@@ -10,7 +10,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    fn layout(_state: &crate::RenderState) -> wgpu::VertexBufferLayout {
+    fn _layout(_state: &crate::RenderState) -> wgpu::VertexBufferLayout {
         todo!();
     }
 

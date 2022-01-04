@@ -1,4 +1,5 @@
 use gltf::{buffer::Data, Accessor};
+use log::warn;
 use wgpu::{
     ColorTargetState, ColorWrites, FragmentState, MultisampleState, PrimitiveState,
     RenderPipelineDescriptor, VertexAttribute, VertexBufferLayout,
@@ -118,7 +119,7 @@ pub fn make_pipeline(
 
 fn vertsf32_into_vec(
     a: &Accessor,
-    bufs: &Vec<Data>,
+    bufs: &[Data],
 ) -> Result<Vec<Vertex>, Box<dyn std::error::Error>> {
     let mut verts = Vec::new();
     for i in 0..a.count() {
@@ -148,10 +149,7 @@ fn vertsf32_into_vec(
     Ok(verts)
 }
 
-fn indiu16_into_vec(
-    a: &Accessor,
-    bufs: &Vec<Data>,
-) -> Result<Vec<u16>, Box<dyn std::error::Error>> {
+fn indiu16_into_vec(a: &Accessor, bufs: &[Data]) -> Result<Vec<u16>, Box<dyn std::error::Error>> {
     let view = a.view().unwrap();
     let data: &[u16] = bytemuck::cast_slice(
         &bufs[view.buffer().index()][view.offset()..view.offset() + view.length()],
@@ -178,13 +176,13 @@ pub fn new(filename: &str) -> Result<Model, Box<dyn std::error::Error>> {
                         }
                         _ => panic!("Only F32 positions supported"),
                     },
-                    other => println!("WARN: no impl for {:?} attribute", other),
+                    other => warn!("WARN: no impl for {:?} attribute", other),
                 }
             }
         }
     }
 
-    let ret_id = if is.len() > 0 { Some(is) } else { None };
+    let ret_id = if !is.is_empty() { Some(is) } else { None };
 
     Ok(Model {
         verts: vs.unwrap(),

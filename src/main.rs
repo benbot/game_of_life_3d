@@ -1,6 +1,5 @@
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 
-use futures::task::{LocalSpawn, LocalSpawnExt};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroupEntry, BindingType, BufferUsages, Color, CommandEncoderDescriptor, DeviceDescriptor,
@@ -13,7 +12,6 @@ use winit::{
 
 mod camera;
 mod model;
-mod utils;
 
 #[derive(Debug)]
 pub struct RenderState {
@@ -31,6 +29,7 @@ pub struct RenderState {
 }
 
 fn main() {
+    env_logger::init();
     let model = model::new("./alexisbox.gltf").unwrap();
     let event_loop = winit::event_loop::EventLoop::new();
     let indices = model.indices.unwrap();
@@ -182,30 +181,27 @@ fn main() {
     let (sx, rx) = std::sync::mpsc::channel();
     let (key_sx, key_rx) = std::sync::mpsc::channel();
 
-    let thread = std::thread::spawn(move || {
+    let _thread = std::thread::spawn(move || {
         let mut go = false;
-        if let yes = rx.recv().unwrap() {
+        if let Ok(yes) = rx.recv() {
             go = yes;
         }
         let state = Arc::get_mut(&mut state_rc).unwrap();
         if go {
             loop {
-                match key_rx.try_recv() {
-                    Ok(keycode) => {
-                        if keycode == event::VirtualKeyCode::W {
-                            state.camera.pos.z += 0.1;
-                        }
-                        if keycode == event::VirtualKeyCode::S {
-                            state.camera.pos.z -= 0.1;
-                        }
-                        if keycode == event::VirtualKeyCode::A {
-                            state.camera.rot_y -= 0.1;
-                        }
-                        if keycode == event::VirtualKeyCode::D {
-                            state.camera.rot_y += 0.1;
-                        }
+                if let Ok(keycode) = key_rx.try_recv() {
+                    if keycode == event::VirtualKeyCode::W {
+                        state.camera.pos.z += 0.1;
                     }
-                    Err(_) => {}
+                    if keycode == event::VirtualKeyCode::S {
+                        state.camera.pos.z -= 0.1;
+                    }
+                    if keycode == event::VirtualKeyCode::A {
+                        state.camera.rot_y -= 0.1;
+                    }
+                    if keycode == event::VirtualKeyCode::D {
+                        state.camera.rot_y += 0.1;
+                    }
                 }
 
                 state.render(model_size as u32);
@@ -215,15 +211,16 @@ fn main() {
 
     event_loop.run(move |event, _, cf| {
         // let state = Rc::get_mut(state_rc).unwrap();
-        sx.send(true);
+        sx.send(true).unwrap();
         match event {
             Event::WindowEvent {
                 window_id,
                 ref event,
             } if window_id == id => match event {
                 WindowEvent::KeyboardInput { input, .. } => {
-                    let keycode = input.virtual_keycode.unwrap();
-                    key_sx.send(keycode);
+                    if let Some(keycode) = input.virtual_keycode {
+                        key_sx.send(keycode).unwrap();
+                    }
                 }
                 WindowEvent::CloseRequested => *cf = ControlFlow::Exit,
                 _ => {}

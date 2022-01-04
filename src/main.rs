@@ -1,10 +1,13 @@
+use std::{rc::Rc, sync::Arc};
+
+use futures::task::{LocalSpawn, LocalSpawnExt};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroupEntry, BindingType, BufferUsages, Color, CommandEncoderDescriptor, DeviceDescriptor,
     Operations, RenderPassDescriptor, RequestAdapterOptions, SurfaceConfiguration,
 };
 use winit::{
-    event::{self, Event, ScanCode, VirtualKeyCode, WindowEvent},
+    event::{self, Event, WindowEvent},
     event_loop::ControlFlow,
 };
 
@@ -12,6 +15,7 @@ mod camera;
 mod model;
 mod utils;
 
+#[derive(Debug)]
 pub struct RenderState {
     window: winit::window::Window,
     device: wgpu::Device,
@@ -81,19 +85,6 @@ fn main() {
         contents: bytemuck::cast_slice(model.indices.unwrap().as_slice()),
         usage: BufferUsages::INDEX,
     });
-
-    // let vbi = device.create_buffer(&wgpu::BufferDescriptor {
-    //     label: Some("index"),
-    //     size: 1024,
-    //     usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
-    //     mapped_at_creation: true,
-    // });
-
-    // queue.write_buffer(
-    //     &vbi,
-    //     0,
-    //     bytemuck::cast_slice(model.indices.unwrap().as_slice()),
-    // );
 
     let bg_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
@@ -172,7 +163,7 @@ fn main() {
         usage: BufferUsages::VERTEX,
     });
 
-    let mut state = RenderState {
+    let mut state_rc = Arc::new(RenderState {
         device,
         adapter,
         surface,
@@ -184,42 +175,69 @@ fn main() {
         instance_buffer,
         window,
         camera,
-    };
+    });
 
-    event_loop.run(move |event, _, cf| match event {
-        Event::WindowEvent {
-            window_id,
-            ref event,
-        } if window_id == id => match event {
-            WindowEvent::KeyboardInput { input, .. } => {
-                let keycode = input.virtual_keycode.unwrap();
-                if keycode == event::VirtualKeyCode::W {
-                    state.camera.pos.z += 0.1;
-                }
-                if keycode == event::VirtualKeyCode::S {
-                    state.camera.pos.z -= 0.1;
-                }
-                if keycode == event::VirtualKeyCode::A {
-                    state.camera.rot_y -= 0.1;
-                }
-                if keycode == event::VirtualKeyCode::D {
-                    state.camera.rot_y += 0.1;
-                }
-            }
-            WindowEvent::CloseRequested => *cf = ControlFlow::Exit,
-            _ => {}
-        },
-        Event::RedrawRequested(_id) => {
-            state.render();
-            state.window.request_redraw();
+    let (sx, rx) = std::sync::mpsc::channel();
+    let (key_sx, key_rx) = std::sync::mpsc::channel();
+
+    let thread = std::thread::spawn(move || {
+        let mut go = false;
+        if let yes = rx.recv().unwrap() {
+            go = yes;
         }
-        _ => {}
+        let state = Arc::get_mut(&mut state_rc).unwrap();
+        if go {
+            loop {
+                match key_rx.try_recv() {
+                    Ok(keycode) => {
+                        if keycode == event::VirtualKeyCode::W {
+                            state.camera.pos.z += 0.1;
+                        }
+                        if keycode == event::VirtualKeyCode::S {
+                            state.camera.pos.z -= 0.1;
+                        }
+                        if keycode == event::VirtualKeyCode::A {
+                            state.camera.rot_y -= 0.1;
+                        }
+                        if keycode == event::VirtualKeyCode::D {
+                            state.camera.rot_y += 0.1;
+                        }
+                    }
+                    Err(_) => {}
+                }
+
+                state.render();
+            }
+        }
+    });
+
+    event_loop.run(move |event, _, cf| {
+        // let state = Rc::get_mut(state_rc).unwrap();
+        sx.send(true);
+        match event {
+            Event::WindowEvent {
+                window_id,
+                ref event,
+            } if window_id == id => match event {
+                WindowEvent::KeyboardInput { input, .. } => {
+                    let keycode = input.virtual_keycode.unwrap();
+                    key_sx.send(keycode);
+                }
+                WindowEvent::CloseRequested => *cf = ControlFlow::Exit,
+                _ => {}
+            },
+            Event::RedrawRequested(_id) => {
+                // state.render();
+                // state.window.request_redraw();
+            }
+            _ => {}
+        }
     });
 }
 
 impl RenderState {
     fn render(&self) {
-        let pipeline = model::make_pipeline(&self).unwrap();
+        let pipeline = model::make_pipeline(self).unwrap();
         let output = self.surface.get_current_texture().unwrap();
         let out_view = output.texture.create_view(&Default::default());
         let mut enc = self

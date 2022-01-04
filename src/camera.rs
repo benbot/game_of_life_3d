@@ -15,7 +15,6 @@ impl Camera {
     }
 
     pub fn get_transform(&self, state: &crate::RenderState) -> Mat4 {
-        println!("{}", self.pos);
         let size = state.window.inner_size();
         let look = Mat4::look_at_rh(self.pos, self.target, glam::Vec3::Y);
         let cam = Mat4::perspective_rh(45.0, size.width as f32 / size.height as f32, 0.1, 100.0);

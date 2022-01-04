@@ -62,7 +62,7 @@ pub fn make_pipeline(
             buffers: &[
                 vertex_layout(),
                 VertexBufferLayout {
-                    array_stride: std::mem::size_of::<glam::Mat4>() as wgpu::BufferAddress,
+                    array_stride: std::mem::size_of::<na::Vector3<f32>>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
                         VertexAttribute {

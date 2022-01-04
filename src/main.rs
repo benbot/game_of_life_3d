@@ -1,3 +1,4 @@
+extern crate nalgebra as na;
 use std::sync::Arc;
 
 use wgpu::{
@@ -28,6 +29,7 @@ pub struct RenderState {
     camera: crate::camera::Camera,
 }
 
+#[ignore]
 fn main() {
     env_logger::init();
     let model = model::new("./alexisbox.gltf").unwrap();
@@ -115,14 +117,14 @@ fn main() {
 
     let cam_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
-        size: std::mem::size_of::<glam::Mat4>() as wgpu::BufferAddress,
+        size: std::mem::size_of::<na::Matrix4<f32>>() as wgpu::BufferAddress,
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
 
     let camera = crate::camera::Camera {
-        pos: glam::Vec3::new(0.0, 1.0, -2.0),
-        target: glam::Vec3::ZERO,
+        pos: na::Point3::new(0.0, 1.0, -2.0),
+        target: na::Point3::new(0.0, 0.0, 0.0),
         rot_x: 0.0,
         rot_y: 0.0,
         buffer: cam_buf,
@@ -137,9 +139,11 @@ fn main() {
                 resource: device
                     .create_buffer_init(&BufferInitDescriptor {
                         label: None,
-                        contents: bytemuck::cast_slice(&[
-                            glam::Mat4::from_rotation_y(90.0) * glam::Mat4::from_rotation_x(45.0)
-                        ]),
+                        contents: bytemuck::cast_slice(&[na::Matrix4::new_rotation(
+                            na::Vector3::y() * 90.0,
+                        ) * na::Matrix4::new_rotation(
+                            na::Vector3::x() * 45.0,
+                        )]),
                         usage: wgpu::BufferUsages::UNIFORM,
                     })
                     .as_entire_binding(),
@@ -157,9 +161,9 @@ fn main() {
     let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Instance Buffer"),
         contents: bytemuck::cast_slice(&[
-            glam::Mat4::from_translation(glam::Vec3::new(0.0, 0.0, 0.0)),
-            glam::Mat4::from_translation(glam::Vec3::new(1.0, 1.0, 0.0)),
-            glam::Mat4::from_translation(glam::Vec3::new(0.5, -0.5, 0.0)),
+            na::Vector4::new(0.0, 0.0, 0.0, 1.0),
+            na::Vector4::new(1.0, 1.0, 0.0, 1.0),
+            na::Vector4::new(0.5, -0.5, 0.0, 1.0),
         ]),
         usage: BufferUsages::VERTEX,
     });

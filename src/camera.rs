@@ -1,7 +1,6 @@
-use std::ops::Add;
-
 use glam::{Mat4, Vec3};
 
+#[derive(Debug)]
 pub struct Camera {
     pub pos: glam::Vec3,
     pub target: glam::Vec3,
@@ -11,7 +10,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    fn layout(state: &crate::RenderState) -> wgpu::VertexBufferLayout {
+    fn layout(_state: &crate::RenderState) -> wgpu::VertexBufferLayout {
         todo!();
     }
 

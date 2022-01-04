@@ -128,7 +128,7 @@ fn main() {
         mapped_at_creation: false,
     });
 
-    let mut camera = crate::camera::Camera {
+    let camera = crate::camera::Camera {
         pos: glam::Vec3::new(0.0, 1.0, -2.0),
         target: glam::Vec3::ZERO,
         rot_x: 0.0,

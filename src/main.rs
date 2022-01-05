@@ -194,17 +194,16 @@ fn main() {
         if go {
             loop {
                 if let Ok(keycode) = key_rx.try_recv() {
-                    if keycode == event::VirtualKeyCode::W {
-                        state.camera.pos.z += 0.1;
-                    }
-                    if keycode == event::VirtualKeyCode::S {
-                        state.camera.pos.z -= 0.1;
-                    }
-                    if keycode == event::VirtualKeyCode::A {
-                        state.camera.rot_y -= 0.1;
-                    }
-                    if keycode == event::VirtualKeyCode::D {
-                        state.camera.rot_y += 0.1;
+                    match keycode {
+                        event::VirtualKeyCode::W => state.camera.pos.z += 0.1,
+                        event::VirtualKeyCode::S => state.camera.pos.z -= 0.1,
+                        event::VirtualKeyCode::A => state.camera.pos.x += 0.1,
+                        event::VirtualKeyCode::D => state.camera.pos.x -= 0.1,
+                        event::VirtualKeyCode::Up => state.camera.rot_y += 0.1,
+                        event::VirtualKeyCode::Down => state.camera.rot_y -= 0.1,
+                        event::VirtualKeyCode::Left => state.camera.rot_x += 0.1,
+                        event::VirtualKeyCode::Right => state.camera.rot_x -= 0.1,
+                        _ => {}
                     }
                 }
 

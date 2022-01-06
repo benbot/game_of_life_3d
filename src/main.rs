@@ -12,7 +12,9 @@ use winit::{
 };
 
 mod camera;
+mod game_of_life;
 mod model;
+use game_of_life::*;
 
 #[derive(Debug)]
 pub struct RenderState {

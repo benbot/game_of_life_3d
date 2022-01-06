@@ -27,6 +27,8 @@ pub struct RenderState {
     bind_groups: Box<[wgpu::BindGroup]>,
     bind_group_layouts: Vec<wgpu::BindGroupLayout>,
     camera: crate::camera::Camera,
+    delta: f32,
+    time: f32,
 }
 
 #[ignore]
@@ -180,6 +182,8 @@ fn main() {
         instance_buffer,
         window,
         camera,
+        delta: 0.0,
+        time: 0.0,
     });
 
     let (sx, rx) = std::sync::mpsc::channel();
@@ -190,19 +194,25 @@ fn main() {
         if let Ok(yes) = rx.recv() {
             go = yes;
         }
-        let state = Arc::get_mut(&mut state_rc).unwrap();
+        let mut state = Arc::get_mut(&mut state_rc).unwrap();
+        let mut last_start = std::time::Instant::now();
         if go {
             loop {
+                let now = std::time::Instant::now();
+                let delta = (now - last_start).as_secs_f32();
+                state.delta = delta;
+                state.time += delta;
+                last_start = now;
                 if let Ok(keycode) = key_rx.try_recv() {
                     match keycode {
-                        event::VirtualKeyCode::W => state.camera.pos.z += 0.1,
-                        event::VirtualKeyCode::S => state.camera.pos.z -= 0.1,
-                        event::VirtualKeyCode::A => state.camera.pos.x += 0.1,
-                        event::VirtualKeyCode::D => state.camera.pos.x -= 0.1,
-                        event::VirtualKeyCode::Up => state.camera.rot_y += 0.1,
-                        event::VirtualKeyCode::Down => state.camera.rot_y -= 0.1,
-                        event::VirtualKeyCode::Left => state.camera.rot_x += 0.1,
-                        event::VirtualKeyCode::Right => state.camera.rot_x -= 0.1,
+                        event::VirtualKeyCode::W => state.camera.pos.z += 1.0,
+                        event::VirtualKeyCode::S => state.camera.pos.z -= 1.0,
+                        event::VirtualKeyCode::A => state.camera.pos.x += 1.0,
+                        event::VirtualKeyCode::D => state.camera.pos.x -= 1.0,
+                        event::VirtualKeyCode::Up => state.camera.rot_y += 1.0,
+                        event::VirtualKeyCode::Down => state.camera.rot_y -= 1.0,
+                        event::VirtualKeyCode::Left => state.camera.rot_x += 1.0,
+                        event::VirtualKeyCode::Right => state.camera.rot_x -= 1.0,
                         _ => {}
                     }
                 }

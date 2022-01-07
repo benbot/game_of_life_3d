@@ -4,7 +4,7 @@ use std::sync::Arc;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroupEntry, BindingType, BufferUsages, Color, CommandEncoderDescriptor, DeviceDescriptor,
-    Operations, RenderPassDescriptor, RequestAdapterOptions, SurfaceConfiguration,
+    Instance, Operations, RenderPassDescriptor, RequestAdapterOptions, SurfaceConfiguration,
 };
 use winit::{
     event::{self, Event, WindowEvent},
@@ -162,13 +162,26 @@ fn main() {
     let bind_groups = Box::new([bg]);
     let bind_group_layouts = vec![bg_layout];
 
+    let instance = crate::model::Instance {
+        position: na::Point3::new(0.0, 0.0, 0.0),
+        rotation: na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), 50.0),
+    };
+    let instance2 = crate::model::Instance {
+        position: na::Point3::new(1.0, 1.0, 0.0),
+        rotation: na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), 0.0),
+    };
+
+    let mut raw1 = instance.to_raw();
+    let mut raw2 = instance2.to_raw();
+    raw1.append(&mut raw2);
+
     let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(&[
-            na::Vector4::new(0.0, 0.0, 0.0, 1.0),
-            na::Vector4::new(1.0, 1.0, 0.0, 1.0),
-            na::Vector4::new(0.5, -0.5, 0.0, 1.0),
-        ]),
+        contents: bytemuck::cast_slice(raw1.as_slice()), //&[
+        // na::Vector4::new(0.0, 0.0, 0.0, 1.0),
+        // na::Vector4::new(0.1, 1.5, 0.0, 1.0),
+        // na::Vector4::new(0.5, -0.5, 0.0, 1.0),
+        //        ]),
         usage: BufferUsages::VERTEX,
     });
 
@@ -286,7 +299,7 @@ impl RenderState {
             pass.set_index_buffer(self.vbi.slice(..), wgpu::IndexFormat::Uint16);
             pass.set_vertex_buffer(0, self.vbo.slice(..));
             pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            pass.draw_indexed(0..size, 0, 0..3);
+            pass.draw_indexed(0..size, 0, 0..2);
         }
 
         self.queue.submit(std::iter::once(enc.finish()));

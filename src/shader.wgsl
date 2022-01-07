@@ -34,7 +34,7 @@ fn vs_main(in: VertexInput, instance: InstanceTransform) -> VertexOutput {
 		instance.c,
 		instance.d,
 	);
-	out.position = camera.rot * vec4<f32>(in.position.xyz, 3.0);
+	out.position = camera.rot * transform * vec4<f32>(in.position.xyz, 3.0);
 	return out;
 }
 

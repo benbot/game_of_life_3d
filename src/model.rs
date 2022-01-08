@@ -1,4 +1,8 @@
-use gltf::{buffer::Data, Accessor};
+extern crate cfg_if;
+use gltf::{
+    buffer::{Data, Source},
+    Accessor,
+};
 use log::warn;
 use wgpu::{
     ColorTargetState, ColorWrites, FragmentState, MultisampleState, PrimitiveState,
@@ -172,7 +176,28 @@ fn indiu16_into_vec(a: &Accessor, bufs: &[Data]) -> Result<Vec<u16>, Box<dyn std
 }
 
 pub fn new(filename: &str) -> Result<Model, Box<dyn std::error::Error>> {
-    let (doc, bufs, _) = gltf::import(filename)?;
+    cfg_if::cfg_if! {
+        if #[cfg(target_arch = "wasm32")] {
+            let file = gltf::Gltf::from_slice(include_bytes!("../alexisbox.gltf"))?;
+            let doc = file.document;
+            let blob = file.blob.unwrap();
+
+            let mut bufs = Vec::new();
+
+            for b in doc.buffers() {
+                match b.source() {
+                    Source::Bin => {
+                        bufs.push(gltf::buffer::Data(blob));
+                        break;
+                    }
+                    _ => {}
+                };
+            }
+        } else {
+            let (doc, bufs, _) = gltf::import(filename)?;
+        }
+    }
+
     let mut vs = None;
     let mut is = Vec::new();
     for m in doc.meshes() {

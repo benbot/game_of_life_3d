@@ -2,9 +2,15 @@
 name = "game_of_life_3d"
 version = "0.1.0"
 edition = "2021"
-create-type = "bin"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "gameoflife"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+[[bin]]
+name = "thing"
+path = "src/main.rs"
 
 [dependencies]
 winit = "0.26"
@@ -19,4 +25,14 @@ futures = "0.3.19"
 log = "0.4.14"
 env_logger = "0.9.0"
 image = "0.23.14"
-rand = "0.8.4"
+cfg-if = "1.0.0"
+
+[target.'cfg(target_arch = "wasm32")']
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.78"
+console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3.55", features = [
+	"Gpu",
+	"GpuUncapturedErrorEvent",
+]}

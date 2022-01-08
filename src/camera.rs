@@ -11,10 +11,6 @@ pub struct Camera {
 }
 
 impl Camera {
-    fn _layout(state: &crate::RenderState) -> wgpu::VertexBufferLayout {
-        todo!();
-    }
-
     pub fn get_transform(&self, state: &crate::RenderState) -> Matrix4<f32> {
         let size = state.window.inner_size();
         let proj = na::Perspective3::new(size.width as f32 / size.height as f32, 90.0, 0.1, 100.0);

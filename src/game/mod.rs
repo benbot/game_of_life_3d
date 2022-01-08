@@ -1,4 +1,5 @@
 use std::{cell::Cell, collections::HashMap, hash::Hash};
+use rand::Rng;
 
 type CellList = HashMap<(i32, i32), bool>;
 
@@ -29,13 +30,21 @@ pub struct Game {
 impl Game {
     pub fn new() -> Game {
         let mut list = CellList::new();
-        for i in 0..10 {
-            for j in 0..10 {
-                list.insert((i, j), false);
+        let size = 0..10;
+        list.insert((0, 0), true);
+        list.insert((1, 0), true);
+        list.insert((1, 1), true);
+        list.insert((2, 1), true);
+        for i in size.clone() {
+            for j in size.clone() {
+                match list.get(&(i, j)) {
+                    Some(_) => (),
+                    None => { list.insert((i, j), false); },
+                };
             }
         }
         Game {
-            list: CellList::new(),
+            list,
         }
     }
 
@@ -71,9 +80,18 @@ impl Game {
 
     pub fn update(&mut self) {
         let mut changes = vec![];
-        for (k, _v) in self.list.iter() {
-            if get_neighbors(&self.list, (k.0, k.1)) > 1 {
+        for (k, v) in self.list.iter() {
+            let neighbors = self.get_neighbors(*k);
+            if neighbors < 2 || neighbors > 3 {
+                changes.push((k.0, k.1, false));
+            }
+
+            if neighbors == 3 && !*v {
                 changes.push((k.0, k.1, true));
+            }
+
+            if neighbors == 2 || neighbors == 3 {
+                //nothing
             }
         }
 
@@ -81,10 +99,19 @@ impl Game {
             self.list.insert((c.0, c.1), c.2);
         }
     }
+
+    fn get_neighbors(&self, cell: (i32, i32)) -> u32 {
+        let mut count: u32 = 0;
+        for (x, y) in offsets {
+            match self.list.get(&(cell.0 + x, cell.1 + y)) {
+                Some(alive) => if *alive {
+                    count += 1;
+                },
+                None => (),
+            }
+        }
+
+        count
+    }
 }
 
-fn get_neighbors(list: &CellList, cell: (i32, i32)) -> u32 {
-    let mut count = 0;
-    for (x, y) in offsets {}
-    todo!();
-}

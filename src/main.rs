@@ -47,7 +47,7 @@ fn main() {
     let id = window.id();
 
     let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::Backends::METAL);
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
 
     let adapter = futures::executor::block_on(instance.request_adapter(&RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::LowPower,
@@ -178,10 +178,11 @@ fn main() {
 
     let game = Game::new();
 
-    let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
+    let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(game.make_list().as_slice()),
         usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+        size: 128000,
+        mapped_at_creation: false,
     });
 
     let mut state_rc = Arc::new(RenderState {
@@ -215,7 +216,14 @@ fn main() {
             loop {
                 let now = std::time::Instant::now();
                 let delta = (now - last_start).as_secs_f32();
-                state.game.update();
+                unsafe {
+                    static mut COUNTER: f32 = 0.0;
+                    if COUNTER >= 1.0 {
+                        state.game.update();
+                        COUNTER = 0.0
+                    }
+                    COUNTER += delta;
+                }
                 state.delta = delta;
                 state.time += delta;
                 last_start = now;

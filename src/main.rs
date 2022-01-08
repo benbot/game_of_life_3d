@@ -1,6 +1,7 @@
 extern crate nalgebra as na;
 use std::sync::Arc;
 
+use crate::game::Game;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroupEntry, BindingType, BufferUsages, Color, CommandEncoderDescriptor, DeviceDescriptor,
@@ -12,6 +13,7 @@ use winit::{
 };
 
 mod camera;
+mod game;
 mod model;
 
 #[derive(Debug)]
@@ -27,6 +29,7 @@ pub struct RenderState {
     bind_groups: Box<[wgpu::BindGroup]>,
     bind_group_layouts: Vec<wgpu::BindGroupLayout>,
     camera: crate::camera::Camera,
+    game: crate::game::Game,
     delta: f32,
     time: f32,
 }
@@ -44,7 +47,7 @@ fn main() {
     let id = window.id();
 
     let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::Backends::METAL);
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
 
     let adapter = futures::executor::block_on(instance.request_adapter(&RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::LowPower,
@@ -125,7 +128,7 @@ fn main() {
     });
 
     let camera = crate::camera::Camera {
-        pos: na::Point3::new(0.0, 1.0, -2.0),
+        pos: na::Point3::new(0.0, 4.0, -5.0),
         target: na::Point3::new(0.0, 0.0, 0.0),
         rot_x: 0.0,
         rot_y: 0.0,
@@ -160,14 +163,26 @@ fn main() {
     let bind_groups = Box::new([bg]);
     let bind_group_layouts = vec![bg_layout];
 
-    let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
+    let instance = crate::model::Instance {
+        position: na::Point3::new(0.0, 0.0, 0.0),
+        rotation: na::UnitQuaternion::from_axis_angle(&na::Vector3::x_axis(), 00.0),
+    };
+    let instance2 = crate::model::Instance {
+        position: na::Point3::new(1.0, 1.0, 0.0),
+        rotation: na::UnitQuaternion::from_axis_angle(&na::Vector3::y_axis(), 0.0),
+    };
+
+    let mut raw1 = instance.to_raw();
+    let mut raw2 = instance2.to_raw();
+    raw1.append(&mut raw2);
+
+    let game = Game::new();
+
+    let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(&[
-            na::Vector4::new(0.0, 0.0, 0.0, 1.0),
-            na::Vector4::new(1.0, 1.0, 0.0, 1.0),
-            na::Vector4::new(0.5, -0.5, 0.0, 1.0),
-        ]),
-        usage: BufferUsages::VERTEX,
+        usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+        size: 128000,
+        mapped_at_creation: false,
     });
 
     let mut state_rc = Arc::new(RenderState {
@@ -182,6 +197,7 @@ fn main() {
         instance_buffer,
         window,
         camera,
+        game,
         delta: 0.0,
         time: 0.0,
     });
@@ -200,6 +216,14 @@ fn main() {
             loop {
                 let now = std::time::Instant::now();
                 let delta = (now - last_start).as_secs_f32();
+                unsafe {
+                    static mut COUNTER: f32 = 0.0;
+                    if COUNTER >= 1.0 {
+                        state.game.update();
+                        COUNTER = 0.0
+                    }
+                    COUNTER += delta;
+                }
                 state.delta = delta;
                 state.time += delta;
                 last_start = now;
@@ -261,6 +285,15 @@ impl RenderState {
             0,
             bytemuck::cast_slice(&[self.camera.get_transform(self)]),
         );
+
+        let list = self.game.make_list();
+        let lists: Box<[f32]> = Box::from(self.game.make_list().as_slice());
+
+        self.queue.write_buffer(
+            &self.instance_buffer,
+            0,
+            bytemuck::cast_slice(lists.as_ref()),
+        );
         {
             let mut pass = enc.begin_render_pass(&RenderPassDescriptor {
                 label: None,
@@ -284,7 +317,7 @@ impl RenderState {
             pass.set_index_buffer(self.vbi.slice(..), wgpu::IndexFormat::Uint16);
             pass.set_vertex_buffer(0, self.vbo.slice(..));
             pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            pass.draw_indexed(0..size, 0, 0..3);
+            pass.draw_indexed(0..size, 0, 0..(lists.len() / 16) as u32);
         }
 
         self.queue.submit(std::iter::once(enc.finish()));

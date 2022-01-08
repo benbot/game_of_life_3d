@@ -17,7 +17,7 @@ impl Camera {
 
     pub fn get_transform(&self, state: &crate::RenderState) -> Matrix4<f32> {
         let size = state.window.inner_size();
-        let proj = na::Perspective3::new(size.width as f32 / size.height as f32, 45.0, 0.1, 100.0);
+        let proj = na::Perspective3::new(size.width as f32 / size.height as f32, 90.0, 0.1, 100.0);
 
         let rot =
             Matrix4::new_rotation_wrt_point(na::Vector3::y() * (state.time % 360.0), self.target)

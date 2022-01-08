@@ -11,6 +11,19 @@ pub struct Vertex {
     position: [f32; 3],
 }
 
+pub struct Instance {
+    pub position: na::Point3<f32>,
+    pub rotation: na::UnitQuaternion<f32>,
+}
+
+impl Instance {
+    pub fn to_raw(&self) -> Vec<f32> {
+        let a = na::Isometry3::from_parts(na::Translation3::from(self.position), self.rotation)
+            .to_matrix();
+        a.as_slice().to_vec()
+    }
+}
+
 fn vertex_layout<'a>() -> wgpu::VertexBufferLayout<'a> {
     let attribs = &[wgpu::VertexAttribute {
         format: wgpu::VertexFormat::Float32x3,
@@ -62,7 +75,7 @@ pub fn make_pipeline(
             buffers: &[
                 vertex_layout(),
                 VertexBufferLayout {
-                    array_stride: std::mem::size_of::<na::Vector3<f32>>() as wgpu::BufferAddress,
+                    array_stride: std::mem::size_of::<[f32; 4 * 4]>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
                         VertexAttribute {

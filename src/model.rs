@@ -1,4 +1,5 @@
 extern crate cfg_if;
+use base64;
 use gltf::{
     buffer::{Data, Source},
     Accessor,
@@ -64,7 +65,7 @@ pub fn make_pipeline(
         push_constant_ranges: &[],
     });
 
-    let shader_string = std::fs::read_to_string("./src/shader.wgsl").unwrap();
+    let shader_string = include_str!("./shader.wgsl");
     let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(shader_string.into()),
@@ -175,27 +176,21 @@ fn indiu16_into_vec(a: &Accessor, bufs: &[Data]) -> Result<Vec<u16>, Box<dyn std
     Ok(data.to_vec())
 }
 
-pub fn new(filename: &str) -> Result<Model, Box<dyn std::error::Error>> {
-    cfg_if::cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-            let file = gltf::Gltf::from_slice(include_bytes!("../alexisbox.gltf"))?;
-            let doc = file.document;
-            let blob = file.blob.unwrap();
+pub fn new(_f: &str) -> Result<Model, Box<dyn std::error::Error>> {
+    let file = gltf::Gltf::from_slice(include_bytes!("../alexisbox.gltf"))?;
+    let doc = file.document;
 
-            let mut bufs = Vec::new();
+    let mut bufs = Vec::new();
 
-            for b in doc.buffers() {
-                match b.source() {
-                    Source::Bin => {
-                        bufs.push(gltf::buffer::Data(blob));
-                        break;
-                    }
-                    _ => {}
-                };
+    for b in doc.buffers() {
+        match b.source() {
+            Source::Uri(s) => {
+                let data: &str = s.split(";base64,").collect::<Vec<&str>>()[1];
+                let buf = gltf::buffer::Data(base64::decode(data)?);
+                bufs.push(buf);
             }
-        } else {
-            let (doc, bufs, _) = gltf::import(filename)?;
-        }
+            _ => {}
+        };
     }
 
     let mut vs = None;

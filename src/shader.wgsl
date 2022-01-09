@@ -1,7 +1,9 @@
+//[[block]]
 struct VertexInput {
 	[[location(0)]] position: vec3<f32>;
 };
 
+//[[block]]
 struct InstanceTransform {
   [[location(10)]] a: vec4<f32>;
   [[location(11)]] b: vec4<f32>;
@@ -13,9 +15,11 @@ struct VertexOutput {
 	[[builtin(position)]] position: vec4<f32>;
 };
 
+//[[block]]
 struct RotUniform {
 	rot: mat4x4<f32>;
 };
+//[[block]]
 struct CamUniform {
 	rot: mat4x4<f32>;
 };

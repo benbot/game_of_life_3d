@@ -1,3 +1,3 @@
 fn main() {
-    gameoflife::run()
+    futures::executor::block_on(gameoflife::run(None));
 }
